@@ -25,6 +25,8 @@ module enter_the_sueb::enter_the_sueb {
 
     struct MintKey<phantom T> has copy, store, drop {}
 
+    struct BurnKey<phantom T> has copy, store, drop {}
+
     struct LevelingKey<phantom T> has copy, store, drop {}
 
     // ----------- Sueb Object ----------- //
@@ -32,27 +34,33 @@ module enter_the_sueb::enter_the_sueb {
     struct EnterTheSueb<phantom T> has key, store {
         id: UID,
         level: u64,
-        maxDuration: u64,
+        max_duration: u64, // unsure of how i want to handle this.
     }
 
     // ----------- Mut Accessor Functions ----------- //
     
+    fun increment_level<T>(self: &mut EnterTheSueb<T>) {
+        self.level = self.level + 1;
+    }
     
     // ----------- Accessor Functions ----------- //
 
 
-    // ----------- Init Functions ----------- //
-
-    // does this expose the keys? no, fun with AdminCap is needed to do anything.
-    public fun create_mint_key<T>(): MintKey<T> {
-        MintKey<T> {}
-    }
+    // ----------- Init Function ----------- //
 
     fun init(ctx: &mut TxContext) {
         transfer::transfer(
             AdminCap { id: object::new(ctx) }, 
             tx_context::sender(ctx));
     }
+
+    // ----------- Create Functions ----------- //
+
+    public fun create_mint_key<T>(): MintKey<T> { MintKey<T> {} }
+
+    public fun create_burn_key<T>(): BurnKey<T> { BurnKey<T> {} }
+
+    public fun create_leveling_key<T>(): LevelingKey<T> { LevelingKey<T> {} }
 
     // ----------- Auth Functions ----------- //
 
@@ -73,16 +81,31 @@ module enter_the_sueb::enter_the_sueb {
 
     public fun mint<T: drop>(
         app: &mut UID,
+        ctx: &mut TxContext,
     ) {
         assert!(is_authorized(app, MintKey<T> {}), EMintNotAuthorized);
+
+        // for now just transfer to sender... something with kiosks.
+        transfer::public_transfer(EnterTheSueb<T> {
+            id: object::new(ctx),
+            level: 0,
+            max_duration: 5,
+        }, tx_context::sender(ctx));
     }
+
+    // ----------- Burn Function ----------- //
+
+    public fun burn<T: drop> () {}  
 
     // ----------- Level Function ----------- //
 
-    public fun gain_xp<T: drop>(
+    public fun leveling<T, K: drop>(
         app: &mut UID,
+        sueb: &mut EnterTheSueb<T>
     ) {
-        assert!(is_authorized(app, LevelingKey<T> {}), ELevelingNotAuthorized);
+        assert!(is_authorized(app, LevelingKey<K> {}), ELevelingNotAuthorized);
+
+        increment_level<T>(sueb);
     }
 
     // ----------- Test Only Function ----------- //
