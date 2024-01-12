@@ -6,7 +6,8 @@ module enter_the_sueb::quest_log {
     use std::vector;
     use std::string::{utf8, String};
 
-    use enter_the_sueb::enter_the_sueb::{Self, MintKey, Relic, AdminCap};
+    use enter_the_sueb::enter_the_sueb::
+        {Self, EnterTheSueb, MintKey, Relic, AdminCap};
 
     const EMintNotAuthorized: u64 = 1001;
     
@@ -44,19 +45,31 @@ module enter_the_sueb::quest_log {
         // needs to pass a type creates a key base on quest type...
         let key = enter_the_sueb::create_mint_key<Relic>();
 
-        mint<MintKey<Relic>>(self, key, ctx)
+        mint<MintKey<Relic>, Relic>(self, key, ctx)
     }
 
     // ----------- Mint Function ----------- //
 
-    public fun mint<T: store + copy + drop>(
+    public fun mint<K: store + copy + drop, T: drop>(
         self: &mut QuestLog,
-        key: T,
+        key: K,
         ctx: &mut TxContext,
     ) {
-        assert!(enter_the_sueb::is_authorized<T>(&self.id, key), EMintNotAuthorized);
+        assert!(enter_the_sueb::is_authorized<K>(&self.id, key), EMintNotAuthorized);
 
-        enter_the_sueb::mint<Relic>(&mut self.id, ctx);
+        enter_the_sueb::mint<T>(&mut self.id, ctx);
+    }
+
+    // ----------- Burn Function ----------- //
+
+    public fun burn<K: store + copy + drop, T: drop>(
+        self: &mut QuestLog,
+        obj: EnterTheSueb<T>,
+        key: K,
+    ) {
+        assert!(enter_the_sueb::is_authorized<K>(&self.id, key), EMintNotAuthorized);
+
+        enter_the_sueb::burn<T>(&mut self.id, obj);
     }
 
     // ----------- Auth Functions ----------- //
@@ -64,10 +77,10 @@ module enter_the_sueb::quest_log {
     // this is pointless not like im getting users to mint
     // public fun authorize_mint_relic
 
-    public fun authorize<T: store + copy + drop>(
+    public fun authorize<K: store + copy + drop>(
         admin_cap: &AdminCap,
         self: &mut QuestLog,
-        key: T
+        key: K
     ) {
         enter_the_sueb::authorize_app(
             admin_cap, &mut self.id, key, utf8(b"quest_log"));

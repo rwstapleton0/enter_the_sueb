@@ -7,7 +7,8 @@ module enter_the_sueb::enter_the_sueb {
     use std::string::String;
 
     const EMintNotAuthorized: u64 = 1001;
-    const ELevelingNotAuthorized: u64 = 1002;
+    const EBurnNotAuthorized: u64 = 1002;
+    const ELevelingNotAuthorized: u64 = 1003;
 
     // ----------- Caps ----------- //
 
@@ -64,14 +65,14 @@ module enter_the_sueb::enter_the_sueb {
 
     // ----------- Auth Functions ----------- //
 
-    public fun is_authorized<T: store + copy + drop>(app: &UID, key: T): bool {
+    public fun is_authorized<K: store + copy + drop>(app: &UID, key: K): bool {
         dynamic_field::exists_(app, key)
     }
 
-    public fun authorize_app<T: store + copy + drop>(
+    public fun authorize_app<K: store + copy + drop>(
         _: &AdminCap,
         app: &mut UID,
-        key: T,
+        key: K,
         app_name: String
     ) {
         dynamic_field::add(app, key, AppCap { app_name })
@@ -83,7 +84,7 @@ module enter_the_sueb::enter_the_sueb {
         app: &mut UID,
         ctx: &mut TxContext,
     ) {
-        assert!(is_authorized(app, MintKey<T> {}), EMintNotAuthorized);
+        assert!(is_authorized(app, create_mint_key<T>()), EMintNotAuthorized);
 
         // for now just transfer to sender... something with kiosks.
         transfer::public_transfer(EnterTheSueb<T> {
@@ -95,15 +96,20 @@ module enter_the_sueb::enter_the_sueb {
 
     // ----------- Burn Function ----------- //
 
-    public fun burn<T: drop> () {}  
+    public fun burn<T: drop> (app: &mut UID, obj: EnterTheSueb<T>) {
+        assert!(is_authorized(app, create_burn_key<T>()), EBurnNotAuthorized);
+
+        let EnterTheSueb<T> {id , level: _, max_duration: _} = obj;
+        object::delete(id);
+    }
 
     // ----------- Level Function ----------- //
 
-    public fun leveling<T, K: drop>(
+    public fun leveling<T: drop>(
         app: &mut UID,
         sueb: &mut EnterTheSueb<T>
     ) {
-        assert!(is_authorized(app, LevelingKey<K> {}), ELevelingNotAuthorized);
+        assert!(is_authorized(app, create_leveling_key<T>()), ELevelingNotAuthorized);
 
         increment_level<T>(sueb);
     }
