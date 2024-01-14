@@ -6,6 +6,10 @@ module enter_the_sueb::enter_the_sueb {
 
     use std::string::String;
 
+    const ENERGY: u8 = 0;
+    const POWER: u8 = 1;
+    const RUSH: u8 = 2;
+
     const EMintNotAuthorized: u64 = 1001;
     const EBurnNotAuthorized: u64 = 1002;
     const ELevelingNotAuthorized: u64 = 1003;
@@ -36,6 +40,14 @@ module enter_the_sueb::enter_the_sueb {
         id: UID,
         level: u64,
         max_duration: u64, // unsure of how i want to handle this.
+    }
+    // was unsure if i want to do this or just a u8 for the df:key, 
+    // but this way i can also link the UID of the sueb for the game
+    struct StatKey has copy, store, drop { key: u8 }
+
+    struct SuebStat has store { 
+        stat: u8, 
+        value: u64,
     }
 
     // ----------- Mut Accessor Functions ----------- //
@@ -86,9 +98,17 @@ module enter_the_sueb::enter_the_sueb {
     ) {
         assert!(is_authorized(app, create_mint_key<T>()), EMintNotAuthorized);
 
+        let id = object::new(ctx);
+
+        dynamic_field::add(&mut id, StatKey { key: ENERGY }, SuebStat{ stat: ENERGY, value: 5 });
+        dynamic_field::add(&mut id, StatKey { key: POWER }, SuebStat{ stat: POWER, value: 5 });
+        dynamic_field::add(&mut id, StatKey { key: RUSH }, SuebStat{ stat: RUSH, value: 5 });
+
         // for now just transfer to sender... something with kiosks.
+        // linter: Returning an object from a function, allows a caller to use the object
+        // and enables composability via programmable transactions.
         transfer::public_transfer(EnterTheSueb<T> {
-            id: object::new(ctx),
+            id,
             level: 0,
             max_duration: 5,
         }, tx_context::sender(ctx));

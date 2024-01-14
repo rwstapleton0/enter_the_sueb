@@ -1,7 +1,7 @@
 #[test_only]
 module enter_the_sueb::enter_the_sueb_test {
     
-    use enter_the_sueb::enter_the_sueb::{Self, AdminCap};
+    use enter_the_sueb::enter_the_sueb::{Self};
     
     use sui::test_scenario as ts;
 

@@ -10,8 +10,8 @@
 /// the same dry flow. maybe write the rest at a later date.
 module enter_the_sueb::app_authorizer {
     use enter_the_sueb::enter_the_sueb::
-        {Self, EnterTheSueb, AdminCap, MintKey, BurnKey, Relic, Warrior};
-    use enter_the_sueb::quest_log::{Self, QuestLog};
+        {Self as ets, EnterTheSueb, AdminCap, MintKey, BurnKey, Relic, Warrior};
+    use enter_the_sueb::quest_log::{Self as quest_log, QuestLog};
     
     use sui::test_scenario::{Self as ts, Scenario};
 
@@ -29,7 +29,7 @@ module enter_the_sueb::app_authorizer {
         {
             ts::next_tx(&mut ts, ADMIN);
 
-            let key = enter_the_sueb::create_burn_key<Relic>();
+            let key = ets::create_burn_key<Relic>();
             quest_log::authorize(&cap, &mut log, key);
 
             quest_log::burn<BurnKey<Relic>, Relic>(&mut log, relic, key);
@@ -40,13 +40,13 @@ module enter_the_sueb::app_authorizer {
 
     // Fails, trys to Burn without authorizing.
     #[test]
-    #[expected_failure(abort_code = 1001)]
+    #[expected_failure(abort_code = quest_log::EMintNotAuthorized)]
     public fun test_burn_not_authorized() {
         let ts = ts::begin(@0x0);
         let (cap, log, relic) = init_quest_log_authorize_and_mint<Relic>(&mut ts);
         {
             ts::next_tx(&mut ts, ADMIN);
-            let key = enter_the_sueb::create_burn_key<Relic>();
+            let key = ets::create_burn_key<Relic>();
 
             quest_log::burn<BurnKey<Relic>, Relic>(&mut log, relic, key);
             // quest_log::authorize(&cap, &mut log);
@@ -59,14 +59,14 @@ module enter_the_sueb::app_authorizer {
     // mint<K, T>, fails when we specify the T type as Warrior, all other combinations will
     // throw a type error.
     #[test]
-    #[expected_failure(abort_code = 1002)]
+    #[expected_failure(abort_code = ets::EBurnNotAuthorized)]
     public fun test_burn_with_wrong_type() {
 
         let ts = ts::begin(@0x0);
         let (cap, log, relic) = init_quest_log_authorize_and_mint<Warrior>(&mut ts);
         {
             ts::next_tx(&mut ts, ADMIN);
-            let key = enter_the_sueb::create_burn_key<Relic>();
+            let key = ets::create_burn_key<Relic>();
             quest_log::authorize(&cap, &mut log, key);
 
             quest_log::burn<BurnKey<Relic>, Warrior>(&mut log, relic, key);
@@ -77,14 +77,14 @@ module enter_the_sueb::app_authorizer {
 
     // Trys to run burn function with a mint key.
     #[test]
-    #[expected_failure(abort_code = 1002)]
+    #[expected_failure(abort_code = ets::EBurnNotAuthorized)]
     public fun test_burn_with_wrong_key() {
 
         let ts = ts::begin(@0x0);
         let (cap, log, relic) = init_quest_log_authorize_and_mint<Relic>(&mut ts);
         {
             ts::next_tx(&mut ts, ADMIN);
-            let key = enter_the_sueb::create_mint_key<Relic>();
+            let key = ets::create_mint_key<Relic>();
             // mint key is already authorized
             // quest_log::authorize(&cap, &mut log, key);
 
@@ -103,7 +103,7 @@ module enter_the_sueb::app_authorizer {
         let (cap, log) = init_quest_log(&mut ts);
         {
             ts::next_tx(&mut ts, ADMIN);
-            let key = enter_the_sueb::create_mint_key<Relic>();
+            let key = ets::create_mint_key<Relic>();
             quest_log::authorize(&cap, &mut log, key);
 
             quest_log::mint<MintKey<Relic>, Relic>(&mut log, key, ts::ctx(&mut ts));
@@ -114,13 +114,13 @@ module enter_the_sueb::app_authorizer {
 
     // Trys to mint without authorizing.
     #[test]
-    #[expected_failure(abort_code = 1001)]
+    #[expected_failure(abort_code = quest_log::EMintNotAuthorized)]
     public fun test_mint_not_authorized() {
         let ts = ts::begin(@0x0);
         let (cap, log) = init_quest_log(&mut ts);
         {
             ts::next_tx(&mut ts, ADMIN);
-            let key = enter_the_sueb::create_mint_key<Relic>();
+            let key = ets::create_mint_key<Relic>();
 
             quest_log::mint<MintKey<Relic>, Relic>(&mut log, key, ts::ctx(&mut ts));
             // quest_log::authorize(&cap, &mut log);
@@ -132,14 +132,14 @@ module enter_the_sueb::app_authorizer {
     // Fails, creates key:'MintKey<Relic>' passes key and key-type as K to mint<K, T>, fails
     // when we specify the T type as Warrior, all other combinations will throw a type error.
     #[test]
-    #[expected_failure(abort_code = 1001)]
+    #[expected_failure(abort_code = ets::EMintNotAuthorized)]
     public fun test_mint_with_wrong_type() {
 
         let ts = ts::begin(@0x0);
         let (cap, log) = init_quest_log(&mut ts);
         {
             ts::next_tx(&mut ts, ADMIN);
-            let key = enter_the_sueb::create_mint_key<Relic>();
+            let key = ets::create_mint_key<Relic>();
             quest_log::authorize(&cap, &mut log, key);
 
             quest_log::mint<MintKey<Relic>, Warrior>(&mut log, key, ts::ctx(&mut ts));
@@ -150,14 +150,14 @@ module enter_the_sueb::app_authorizer {
 
     // Trys to run mint function with a burn key.
     #[test]
-    #[expected_failure(abort_code = 1001)]
+    #[expected_failure(abort_code = ets::EMintNotAuthorized)]
     public fun test_mint_with_wrong_key() {
 
         let ts = ts::begin(@0x0);
         let (cap, log) = init_quest_log(&mut ts);
         {
             ts::next_tx(&mut ts, ADMIN);
-            let key = enter_the_sueb::create_burn_key<Relic>();
+            let key = ets::create_burn_key<Relic>();
             quest_log::authorize(&cap, &mut log, key);
 
             quest_log::mint<BurnKey<Relic>, Relic>(&mut log, key, ts::ctx(&mut ts));
@@ -190,14 +190,14 @@ module enter_the_sueb::app_authorizer {
         {
             ts::next_tx(&mut ts, ADMIN);
             let ctx = ts::ctx(&mut ts);
-            enter_the_sueb::test_init(ctx);
+            ets::test_init(ctx);
             quest_log::test_init(ctx);
         };
         {
             ts::next_tx(&mut ts, ADMIN);
-            let cap:AdminCap = ts::take_from_sender(&mut ts);
-            let log: QuestLog = ts::take_shared(&mut ts);
-            ts::return_to_sender(&mut ts, cap);
+            let cap:AdminCap = ts::take_from_sender(&ts);
+            let log: QuestLog = ts::take_shared(&ts);
+            ts::return_to_sender(&ts, cap);
             ts::return_shared(log);
         };
         
@@ -214,7 +214,7 @@ module enter_the_sueb::app_authorizer {
         let ets: EnterTheSueb<T>;
         {
             ts::next_tx(ts, ADMIN);
-            let key = enter_the_sueb::create_mint_key<T>();
+            let key = ets::create_mint_key<T>();
             quest_log::authorize(&cap, &mut log, key);
 
             quest_log::mint<MintKey<T>, T>(&mut log, key, ts::ctx(ts));
@@ -236,7 +236,7 @@ module enter_the_sueb::app_authorizer {
         {
             ts::next_tx(ts, ADMIN);
             let ctx = ts::ctx(ts);
-            enter_the_sueb::test_init(ctx);
+            ets::test_init(ctx);
             quest_log::test_init(ctx);
         };
         {
